@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide de Sélection PAC Piscine & DECOCLIM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Warm neutrals with muted blue and subtle gold accents) -->
+    <!-- Application Structure Plan: A dashboard-style tool is chosen over a linear report format for maximum usability. The core is a dynamic filtering system (by brand, power, and cover size) that instantly updates a grid of product cards. This task-oriented design allows users to quickly find compatible products. Visualizations (bar and donut charts) provide a high-level summary of the product catalog, aiding in contextual understanding. This interactive approach empowers the user to explore the data according to their specific needs, which is more efficient than reading a static table. -->
+    <!-- Visualization & Content Choices:
+    - Main Data Table -> Goal: Organize/Inform -> Presentation: Responsive Card Grid (HTML/Tailwind) -> Interaction: Dynamically filtered by user selections -> Justification: Better UX and mobile-friendliness than a wide table.
+    - Product Categories (Brand, Size) -> Goal: Filter -> Presentation: Filter Buttons (HTML/Tailwind) -> Interaction: Click to filter results -> Justification: Intuitive and direct for categorical data.
+    - Power (kW) -> Goal: Compare/Filter -> Presentation: Bar Chart (Chart.js/Canvas) & Range Slider (HTML) -> Interaction: Slider filters cards, chart provides visual context -> Justification: Slider is ideal for numerical ranges; chart allows for easy visual comparison of model power.
+    - DECOCLIM Size Distribution -> Goal: Compare -> Presentation: Donut Chart (Chart.js/Canvas) -> Interaction: Static visual summary -> Justification: Effectively shows the proportion of each required cover size, giving a quick overview of the product landscape. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .filter-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .filter-btn.active {
+            background-color: #0284c7;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .card-link {
+            transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+        .card-link:hover {
+            background-color: #0284c7;
+            transform: translateY(-2px);
+        }
+        .table-custom th, .table-custom td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .table-custom th {
+            text-align: left;
+            font-weight: 600;
+        }
+        .table-custom tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-sky-800 tracking-tight">Guide de Sélection PAC & DECOCLIM</h1>
+            <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">Une application interactive pour trouver la solution DECOCLIM parfaitement adaptée à votre pompe à chaleur de piscine.</p>
+        </header>
+
+        <main>
+            <section id="filters" class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-gray-200 mb-12 sticky top-4 z-10">
+                <h2 class="text-xl font-bold mb-4 text-center text-sky-900">Filtrez votre recherche</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <div class="space-y-3">
+                        <label class="font-semibold text-gray-700 block text-center">Marque</label>
+                        <div id="brand-filters" class="flex flex-wrap justify-center gap-2">
+                            <button data-brand="all" class="filter-btn active text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Toutes</button>
+                            <button data-brand="Flowdians" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Flowdians</button>
+                            <button data-brand="Hayward" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Hayward</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label for="power-range" class="font-semibold text-gray-700 block text-center">Puissance (kW)</label>
+                        <div class="px-2">
+                            <input id="power-range" type="range" min="0" max="20" value="20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>0 kW</span>
+                                <span id="power-value" class="font-bold text-sky-700">Jusqu'à 20 kW</span>
+                                <span>20 kW</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="font-semibold text-gray-700 block text-center">Taille DECOCLIM</label>
+                        <div id="size-filters" class="flex flex-wrap justify-center gap-2">
+                            <button data-size="all" class="filter-btn active text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Toutes</button>
+                            <button data-size="S" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">S</button>
+                            <button data-size="M" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">M</button>
+                            <button data-size="L" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">L</button>
+                            <button data-size="XL" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">XL</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="visualizations" class="mb-12">
+                <h2 class="text-3xl font-bold text-center mb-8 text-sky-900">Aperçu du Catalogue</h2>
+                <p class="text-center text-gray-600 max-w-3xl mx-auto mb-10">Ces graphiques illustrent la répartition des modèles de pompes à chaleur disponibles dans notre guide. Ils vous aident à visualiser rapidement la distribution des puissances par marque et la popularité des différentes tailles de caches DECOCLIM, vous offrant un contexte précieux pour votre sélection.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+                        <h3 class="text-xl font-bold mb-4 text-center text-sky-800">Puissance par Modèle</h3>
+                        <div class="chart-container">
+                            <canvas id="powerChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+                        <h3 class="text-xl font-bold mb-4 text-center text-sky-800">Répartition des Tailles DECOCLIM</h3>
+                        <div class="chart-container">
+                            <canvas id="sizeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="deco-info" class="mb-12">
+                <h2 class="text-3xl font-bold text-center mb-8 text-sky-900">Guide DECOCLIM</h2>
+                <p class="text-center text-gray-600 max-w-3xl mx-auto mb-6">Les caches DECOCLIM sont conçus pour s'adapter parfaitement aux unités extérieures. La gamme aluminium est disponible en 11 couleurs de stock et bénéficie d'une garantie de 10 ans.</p>
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+                    <h3 class="text-xl font-bold mb-4 text-center text-sky-800">Dimensions Intérieures DECOCLIM (mm)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="table-custom w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="rounded-tl-xl">Taille</th>
+                                    <th>Réf ALU</th>
+                                    <th class="rounded-tr-xl">Dimensions Int. (H x L x P)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-bold">S</td>
+                                    <td>23 AS (+code ral)</td>
+                                    <td>H 680 x L 900 x P 450-600 (profondeur ajustable)</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">M</td>
+                                    <td>23 AM (+code ral)</td>
+                                    <td>H 850 x L 1050 x P 510-660 (profondeur ajustable)</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">L</td>
+                                    <td>23 AL (+code ral)</td>
+                                    <td>H 950 x L 1100 x P 550-700 (profondeur ajustable)</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">XL</td>
+                                    <td>23 AXL (+code ral)</td>
+                                    <td>H 1200 x L 1310 x P 650-800 (profondeur ajustable)</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">XXL</td>
+                                    <td>23 AXL (+code ral) <br>+23 AXXL (+code ral)</td>
+                                    <td>H 1700 x L 1310 x P 650-800 (profondeur ajustable)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="results">
+                 <h2 class="text-3xl font-bold text-center mb-8 text-sky-900">Solutions Compatibles</h2>
+                 <p class="text-center text-gray-600 max-w-3xl mx-auto mb-10">Voici la liste des pompes à chaleur correspondant à vos critères de recherche. Chaque fiche détaille le modèle, ses dimensions, et la solution DECOCLIM recommandée. Cliquez sur les liens pour accéder directement aux fiches produits détaillées et finaliser votre choix.</p>
+                <div id="results-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                </div>
+                <p id="no-results" class="text-center text-gray-500 text-lg hidden py-12">Aucun produit ne correspond à votre recherche. Essayez d'ajuster les filtres.</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pacData = [
+                { brand: 'Flowdians', model: 'PFI Inverter 6 kW', power: 6, dims: '605x1000x418', decoSize: 'M', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/pompe-a-chaleur-pfi-inverter-6-kw-flowdians69339174.html', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-m/materiau-alu' },
+                { brand: 'Flowdians', model: 'PFI Inverter 8 kW', power: 8, dims: '605x1000x418', decoSize: 'M', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/pompe-a-chaleur-pfi-inverter-8-kw-flowdians69339182.html', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-m/materiau-alu' },
+                { brand: 'Flowdians', model: 'PFI Inverter 11 kW', power: 11, dims: '605x1000x418', decoSize: 'M', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/pompe-a-chaleur-pfi-inverter-11-kw-flowdians69339190.html', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-m/materiau-alu' },
+                { brand: 'Flowdians', model: 'PFI Inverter 15 kW', power: 15, dims: '768x1047x453', decoSize: 'L', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/tous-nos-produits/piscine/pompes-a-chaleur-echangeurs-et-rechauffeurs/pompes-a-chaleur-piscine.html?query=%2Fcat3%3E%7Bha009001%7D%2Fmarque%3E%7Bflowdians%7D', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-l/materiau-alu' },
+                { brand: 'Hayward', model: 'Powerline EcoPac 406', power: 6, dims: '540x864x420', decoSize: 'S', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/tous-nos-produits/piscine/pompes-a-chaleur-echangeurs-et-rechauffeurs/pompes-a-chaleur-piscine.html?query=%2Fcat3%3E%7Bha009001%7D%2Fmarque%3E%7Bhayward%7D', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-s/materiau-alu' },
+                { brand: 'Hayward', model: 'Powerline EcoPac 558', power: 8, dims: '648x1004x460', decoSize: 'M', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/tous-nos-produits/piscine/pompes-a-chaleur-echangeurs-et-rechauffeurs/pompes-a-chaleur-piscine.html?query=%2Fcat3%3E%7Bha009001%7D%2Fmarque%3E%7Bhayward%7D', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-m/materiau-alu' },
+                { brand: 'Hayward', model: 'KPAC 7 kW', power: 7, dims: '605x1003x418', decoSize: 'M', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/tous-nos-produits/piscine/pompes-a-chaleur-echangeurs-et-rechauffeurs/pompes-a-chaleur-piscine.html?query=%2Fcat3%3E%7Bha009001%7D%2Fmarque%3E%7Bhayward%7D', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-m/materiau-alu' },
+                { brand: 'Hayward', model: 'KPAC 9 kW', power: 9, dims: '768x1048x437', decoSize: 'L', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/tous-nos-produits/piscine/pompes-a-chaleur-echangeurs-et-rechauffeurs/pompes-a-chaleur-piscine.html?query=%2Fcat3%3E%7Bha009001%7D%2Fmarque%3E%7Bhayward%7D', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-l/materiau-alu' },
+                { brand: 'Hayward', model: 'KPAC 11 kW', power: 11, dims: '862x1161x473', decoSize: 'XL', info: 'Pose sur dalle - Prévoir Accessoire Dos', pacLink: 'https://www.hydralians.fr/tous-nos-produits/piscine/pompes-a-chaleur-echangeurs-et-rechauffeurs/pompes-a-chaleur-piscine.html?query=%2Fcat3%3E%7Bha009001%7D%2Fmarque%3E%7Bhayward%7D', decoLink: 'https://www.decoclim.fr/12-decoclim#/taille-xl/materiau-alu' },
+            ];
+
+            const resultsGrid = document.getElementById('results-grid');
+            const noResults = document.getElementById('no-results');
+            
+            let filters = {
+                brand: 'all',
+                maxPower: 20,
+                size: 'all'
+            };
+
+            const renderCards = () => {
+                resultsGrid.innerHTML = '';
+                const filteredData = pacData.filter(item => {
+                    return (filters.brand === 'all' || item.brand === filters.brand) &&
+                           (item.power <= filters.maxPower) &&
+                           (filters.size === 'all' || item.decoSize === filters.size);
+                });
+
+                if (filteredData.length === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+
+                filteredData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden flex flex-col transition-transform duration-300 hover:scale-105';
+                    card.innerHTML = `
+                        <div class="p-6 flex-grow">
+                            <div class="flex justify-between items-start">
+                                <h3 class="text-lg font-bold text-sky-800">${item.model}</h3>
+                                <span class="text-xs font-bold py-1 px-3 rounded-full ${item.brand === 'Flowdians' ? 'bg-amber-100 text-amber-800' : 'bg-cyan-100 text-cyan-800'}">${item.brand}</span>
+                            </div>
+                            <div class="mt-4 space-y-3 text-sm text-gray-600">
+                                <p><span class="font-semibold text-gray-800">Puissance :</span> ${item.power} kW</p>
+                                <p><span class="font-semibold text-gray-800">Dimensions (HxLxP) :</span> ${item.dims} mm</p>
+                                <p><span class="font-semibold text-gray-800">DECOCLIM Recommandé :</span> <span class="font-bold text-sky-700">Taille ${item.decoSize}</span></p>
+                                <p><span class="font-semibold text-gray-800">Installation :</span> ${item.info}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-px bg-gray-100">
+                            <a href="${item.pacLink}" target="_blank" rel="noopener noreferrer" class="card-link block text-center p-4 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700">Fiche PAC</a>
+                            <a href="${item.decoLink}" target="_blank" rel="noopener noreferrer" class="card-link block text-center p-4 text-sm font-semibold text-white bg-sky-700 hover:bg-sky-800">Fiche DECOCLIM</a>
+                        </div>
+                    `;
+                    resultsGrid.appendChild(card);
+                });
+            };
+
+            const brandFilters = document.getElementById('brand-filters');
+            brandFilters.addEventListener('click', e => {
+                if (e.target.tagName === 'BUTTON') {
+                    filters.brand = e.target.dataset.brand;
+                    brandFilters.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderCards();
+                }
+            });
+            
+            const sizeFilters = document.getElementById('size-filters');
+            sizeFilters.addEventListener('click', e => {
+                if (e.target.tagName === 'BUTTON') {
+                    filters.size = e.target.dataset.size;
+                    sizeFilters.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderCards();
+                }
+            });
+
+            const powerRange = document.getElementById('power-range');
+            const powerValue = document.getElementById('power-value');
+            powerRange.addEventListener('input', e => {
+                filters.maxPower = parseInt(e.target.value);
+                powerValue.textContent = `Jusqu'à ${filters.maxPower} kW`;
+                if(filters.maxPower == 20) powerValue.textContent = `Jusqu'à 20 kW et +`;
+                if(filters.maxPower == 0) powerValue.textContent = `0 kW`;
+                renderCards();
+            });
+
+            const renderCharts = () => {
+                const powerCtx = document.getElementById('powerChart').getContext('2d');
+                const sizeCtx = document.getElementById('sizeChart').getContext('2d');
+                
+                const brandColors = {
+                    'Flowdians': 'rgba(251, 191, 36, 0.7)',
+                    'Hayward': 'rgba(22, 163, 164, 0.7)',
+                };
+                
+                const borderColors = {
+                    'Flowdians': 'rgba(251, 191, 36, 1)',
+                    'Hayward': 'rgba(22, 163, 164, 1)',
+                };
+
+                new Chart(powerCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: pacData.map(p => p.model),
+                        datasets: [{
+                            label: 'Puissance (kW)',
+                            data: pacData.map(p => p.power),
+                            backgroundColor: pacData.map(p => brandColors[p.brand]),
+                            borderColor: pacData.map(p => borderColors[p.brand]),
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: (tooltipItems) => {
+                                        const index = tooltipItems[0].dataIndex;
+                                        return pacData[index].brand + ' - ' + tooltipItems[0].label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Puissance (kW)' }
+                            },
+                             x: {
+                                ticks: {
+                                    callback: function(value, index, values) {
+                                        let label = this.getLabelForValue(value);
+                                        return label.length > 16 ? label.substring(0, 16) + '...' : label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                const sizeCounts = pacData.reduce((acc, p) => {
+                    acc[p.decoSize] = (acc[p.decoSize] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const sizeLabels = Object.keys(sizeCounts).sort();
+                const sizeData = sizeLabels.map(label => sizeCounts[label]);
+
+                new Chart(sizeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: sizeLabels.map(l => `Taille ${l}`),
+                        datasets: [{
+                            data: sizeData,
+                            backgroundColor: ['#fecaca', '#a5f3fc', '#67e8f9', '#22d3ee'],
+                             borderColor: ['#f87171', '#22d3ee', '#06b6d4', '#0891b2'],
+                            borderWidth: 2,
+                            hoverOffset: 4
+                        }]
+                    },
+                     options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            };
+
+            renderCards();
+            renderCharts();
+        });
+    </script>
+</body>
+</html>
