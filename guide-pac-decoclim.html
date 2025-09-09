@@ -62,6 +62,36 @@
         .table-custom tr:last-child td {
             border-bottom: none;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 20;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 24px;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .product-list-item {
+            cursor: pointer;
+            padding: 12px;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .product-list-item:hover {
+            background-color: #f3f4f6;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -73,60 +103,74 @@
         </header>
 
         <main>
-            <section id="filters" class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-gray-200 mb-12 sticky top-4 z-10">
-                <h2 class="text-xl font-bold mb-4 text-center text-sky-900">Filtrez votre recherche</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                    <div class="space-y-3">
-                        <label class="font-semibold text-gray-700 block text-center">Marque</label>
-                        <div id="brand-filters" class="flex flex-wrap justify-center gap-2">
-                            <button data-brand="all" class="filter-btn active text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Toutes</button>
-                            <button data-brand="Flowdians" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Flowdians</button>
-                            <button data-brand="Hayward" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Hayward</button>
-                        </div>
-                    </div>
+            <section id="single-result-container" class="hidden">
+                 <div class="flex justify-center mb-6">
+                    <button id="back-to-list-btn" class="py-2 px-6 bg-gray-200 text-gray-700 font-bold rounded-full hover:bg-gray-300 transition-colors">
+                        Retour à la liste complète
+                    </button>
+                 </div>
+                 <div id="single-card-display" class="grid grid-cols-1 justify-items-center"></div>
+            </section>
 
-                    <div class="space-y-3">
-                        <label for="power-range" class="font-semibold text-gray-700 block text-center">Puissance (kW)</label>
-                        <div class="px-2">
-                            <input id="power-range" type="range" min="0" max="20" value="20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
-                            <div class="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>0 kW</span>
-                                <span id="power-value" class="font-bold text-sky-700">Jusqu'à 20 kW</span>
-                                <span>20 kW</span>
+            <section id="filters-and-charts">
+                <section id="filters" class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-gray-200 mb-12 sticky top-4 z-10">
+                    <h2 class="text-xl font-bold mb-4 text-center text-sky-900">Filtrez votre recherche</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                        <div class="space-y-3">
+                            <label class="font-semibold text-gray-700 block text-center">Marque</label>
+                            <div id="brand-filters" class="flex flex-wrap justify-center gap-2">
+                                <button data-brand="all" class="filter-btn active text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Toutes</button>
+                                <button data-brand="Flowdians" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Flowdians</button>
+                                <button data-brand="Hayward" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Hayward</button>
+                            </div>
+                        </div>
+    
+                        <div class="space-y-3">
+                            <label for="power-range" class="font-semibold text-gray-700 block text-center">Puissance (kW)</label>
+                            <div class="px-2">
+                                <input id="power-range" type="range" min="0" max="20" value="20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>0 kW</span>
+                                    <span id="power-value" class="font-bold text-sky-700">Jusqu'à 20 kW</span>
+                                    <span>20 kW</span>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <div class="space-y-3">
+                            <label class="font-semibold text-gray-700 block text-center">Taille DECOCLIM</label>
+                            <div id="size-filters" class="flex flex-wrap justify-center gap-2">
+                                <button data-size="all" class="filter-btn active text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Toutes</button>
+                                <button data-size="S" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">S</button>
+                                <button data-size="M" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">M</button>
+                                <button data-size="L" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">L</button>
+                                <button data-size="XL" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">XL</button>
                             </div>
                         </div>
                     </div>
-
-                    <div class="space-y-3">
-                        <label class="font-semibold text-gray-700 block text-center">Taille DECOCLIM</label>
-                        <div id="size-filters" class="flex flex-wrap justify-center gap-2">
-                            <button data-size="all" class="filter-btn active text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">Toutes</button>
-                            <button data-size="S" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">S</button>
-                            <button data-size="M" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">M</button>
-                            <button data-size="L" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">L</button>
-                            <button data-size="XL" class="filter-btn text-sm font-semibold py-2 px-4 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300">XL</button>
+                    <div class="mt-6 flex justify-center">
+                        <button id="open-select-modal" class="py-3 px-6 bg-sky-500 text-white font-bold rounded-full shadow-lg hover:bg-sky-600 transition-colors">Sélectionner une PAC</button>
+                    </div>
+                </section>
+                
+                <section id="visualizations" class="mb-12">
+                    <h2 class="text-3xl font-bold text-center mb-8 text-sky-900">Aperçu du Catalogue</h2>
+                    <p class="text-center text-gray-600 max-w-3xl mx-auto mb-10">Ces graphiques illustrent la répartition des modèles de pompes à chaleur disponibles dans notre guide. Ils vous aident à visualiser rapidement la distribution des puissances par marque et la popularité des différentes tailles de caches DECOCLIM, vous offrant un contexte précieux pour votre sélection.</p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                        <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+                            <h3 class="text-xl font-bold mb-4 text-center text-sky-800">Puissance par Modèle</h3>
+                            <div class="chart-container">
+                                <canvas id="powerChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+                            <h3 class="text-xl font-bold mb-4 text-center text-sky-800">Répartition des Tailles DECOCLIM</h3>
+                            <div class="chart-container">
+                                <canvas id="sizeChart"></canvas>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
-            
-            <section id="visualizations" class="mb-12">
-                <h2 class="text-3xl font-bold text-center mb-8 text-sky-900">Aperçu du Catalogue</h2>
-                <p class="text-center text-gray-600 max-w-3xl mx-auto mb-10">Ces graphiques illustrent la répartition des modèles de pompes à chaleur disponibles dans notre guide. Ils vous aident à visualiser rapidement la distribution des puissances par marque et la popularité des différentes tailles de caches DECOCLIM, vous offrant un contexte précieux pour votre sélection.</p>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                    <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
-                        <h3 class="text-xl font-bold mb-4 text-center text-sky-800">Puissance par Modèle</h3>
-                        <div class="chart-container">
-                            <canvas id="powerChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
-                        <h3 class="text-xl font-bold mb-4 text-center text-sky-800">Répartition des Tailles DECOCLIM</h3>
-                        <div class="chart-container">
-                            <canvas id="sizeChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+                </section>
             </section>
 
             <section id="deco-info" class="mb-12">
@@ -185,6 +229,16 @@
         </main>
     </div>
 
+    <div id="select-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-sky-800 mb-4 text-center">Sélectionner un modèle</h3>
+            <ul id="product-list" class="space-y-2 max-h-64 overflow-y-auto border rounded-xl p-2"></ul>
+            <div class="flex justify-center mt-6 space-x-4">
+                <button id="close-select-modal-btn" class="py-2 px-6 bg-gray-200 text-gray-700 font-bold rounded-full hover:bg-gray-300 transition-colors">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const pacData = [
@@ -201,6 +255,10 @@
 
             const resultsGrid = document.getElementById('results-grid');
             const noResults = document.getElementById('no-results');
+            const singleCardDisplay = document.getElementById('single-card-display');
+            const singleResultContainer = document.getElementById('single-result-container');
+            const filtersAndChartsSection = document.getElementById('filters-and-charts');
+            const backToListBtn = document.getElementById('back-to-list-btn');
             
             let filters = {
                 brand: 'all',
@@ -208,44 +266,66 @@
                 size: 'all'
             };
 
-            const renderCards = () => {
+            const renderCards = (data) => {
                 resultsGrid.innerHTML = '';
-                const filteredData = pacData.filter(item => {
+                singleCardDisplay.innerHTML = '';
+                
+                const displayData = data || pacData.filter(item => {
                     return (filters.brand === 'all' || item.brand === filters.brand) &&
                            (item.power <= filters.maxPower) &&
                            (filters.size === 'all' || item.decoSize === filters.size);
                 });
 
-                if (filteredData.length === 0) {
+                if (displayData.length === 0) {
                     noResults.classList.remove('hidden');
+                    singleResultContainer.classList.add('hidden');
+                } else if (data && data.length === 1) {
+                    noResults.classList.add('hidden');
+                    singleResultContainer.classList.remove('hidden');
+                    filtersAndChartsSection.classList.add('hidden');
+                    const card = createCardElement(displayData[0]);
+                    singleCardDisplay.appendChild(card);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
                     noResults.classList.add('hidden');
+                    singleResultContainer.classList.add('hidden');
+                    filtersAndChartsSection.classList.remove('hidden');
+                    displayData.forEach(item => {
+                        const card = createCardElement(item);
+                        resultsGrid.appendChild(card);
+                    });
                 }
-
-                filteredData.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden flex flex-col transition-transform duration-300 hover:scale-105';
-                    card.innerHTML = `
-                        <div class="p-6 flex-grow">
-                            <div class="flex justify-between items-start">
-                                <h3 class="text-lg font-bold text-sky-800">${item.model}</h3>
-                                <span class="text-xs font-bold py-1 px-3 rounded-full ${item.brand === 'Flowdians' ? 'bg-amber-100 text-amber-800' : 'bg-cyan-100 text-cyan-800'}">${item.brand}</span>
-                            </div>
-                            <div class="mt-4 space-y-3 text-sm text-gray-600">
-                                <p><span class="font-semibold text-gray-800">Puissance :</span> ${item.power} kW</p>
-                                <p><span class="font-semibold text-gray-800">Dimensions (HxLxP) :</span> ${item.dims} mm</p>
-                                <p><span class="font-semibold text-gray-800">DECOCLIM Recommandé :</span> <span class="font-bold text-sky-700">Taille ${item.decoSize}</span></p>
-                                <p><span class="font-semibold text-gray-800">Installation :</span> ${item.info}</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-px bg-gray-100">
-                            <a href="${item.pacLink}" target="_blank" rel="noopener noreferrer" class="card-link block text-center p-4 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700">Fiche PAC</a>
-                            <a href="${item.decoLink}" target="_blank" rel="noopener noreferrer" class="card-link block text-center p-4 text-sm font-semibold text-white bg-sky-700 hover:bg-sky-800">Fiche DECOCLIM</a>
-                        </div>
-                    `;
-                    resultsGrid.appendChild(card);
-                });
             };
+            
+            const createCardElement = (item) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden flex flex-col transition-transform duration-300 hover:scale-105';
+                card.innerHTML = `
+                    <div class="p-6 flex-grow">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-sky-800">${item.model}</h3>
+                            <span class="text-xs font-bold py-1 px-3 rounded-full ${item.brand === 'Flowdians' ? 'bg-amber-100 text-amber-800' : 'bg-cyan-100 text-cyan-800'}">${item.brand}</span>
+                        </div>
+                        <div class="mt-4 space-y-3 text-sm text-gray-600">
+                            <p><span class="font-semibold text-gray-800">Puissance :</span> ${item.power} kW</p>
+                            <p><span class="font-semibold text-gray-800">Dimensions (HxLxP) :</span> ${item.dims} mm</p>
+                            <p><span class="font-semibold text-gray-800">DECOCLIM Recommandé :</span> <span class="font-bold text-sky-700">Taille ${item.decoSize}</span></p>
+                            <p><span class="font-semibold text-gray-800">Installation :</span> ${item.info}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-px bg-gray-100">
+                        <a href="${item.pacLink}" target="_blank" rel="noopener noreferrer" class="card-link block text-center p-4 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700">Fiche PAC</a>
+                        <a href="${item.decoLink}" target="_blank" rel="noopener noreferrer" class="card-link block text-center p-4 text-sm font-semibold text-white bg-sky-700 hover:bg-sky-800">Fiche DECOCLIM</a>
+                    </div>
+                `;
+                return card;
+            };
+
+            backToListBtn.addEventListener('click', () => {
+                filtersAndChartsSection.classList.remove('hidden');
+                singleResultContainer.classList.add('hidden');
+                renderCards();
+            });
 
             const brandFilters = document.getElementById('brand-filters');
             brandFilters.addEventListener('click', e => {
@@ -366,6 +446,53 @@
                 });
             };
 
+            const selectModal = document.getElementById('select-modal');
+            const openSelectModalBtn = document.getElementById('open-select-modal');
+            const closeSelectModalBtn = document.getElementById('close-select-modal-btn');
+            const productList = document.getElementById('product-list');
+
+            const populateProductList = () => {
+                productList.innerHTML = '';
+                const sortedData = [...pacData].sort((a, b) => {
+                    if (a.brand < b.brand) return -1;
+                    if (a.brand > b.brand) return 1;
+                    return a.power - b.power;
+                });
+
+                sortedData.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'product-list-item rounded-lg';
+                    li.dataset.index = pacData.findIndex(d => d.model === item.model);
+                    li.innerHTML = `<span class="font-semibold">${item.brand}</span> - ${item.model}`;
+                    productList.appendChild(li);
+                });
+
+                productList.querySelectorAll('.product-list-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const selectedItem = pacData[item.dataset.index];
+                        renderCards([selectedItem]);
+                        selectModal.style.display = 'none';
+                    });
+                });
+            };
+
+            openSelectModalBtn.onclick = () => {
+                populateProductList();
+                selectModal.style.display = 'flex';
+            };
+
+            closeSelectModalBtn.onclick = () => {
+                selectModal.style.display = 'none';
+                renderCards();
+            };
+
+            window.onclick = (event) => {
+                if (event.target === selectModal) {
+                    selectModal.style.display = 'none';
+                    renderCards();
+                }
+            };
+            
             renderCards();
             renderCharts();
         });
